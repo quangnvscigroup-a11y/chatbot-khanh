@@ -9,11 +9,17 @@ app = FastAPI()
 PAGE_ACCESS_TOKEN = os.getenv("PAGE_ACCESS_TOKEN")
 VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "khanhthaoduoc2024")
 
-# Các từ khóa hỏi giá
-GIA_KEYWORDS = [
-    "giá", "gia", "bao nhiêu", "bao nhieu", "giá bao nhiêu", "giá thuốc",
-    "giá sản phẩm", "giá sp", "giá nhỏ mắt", "thuốc giá", "mua giá",
-    "giá mua", "tiền", "cost", "price"
+# Lưu danh sách khách đã được trả lời rồi (không trả lời lại)
+da_tra_loi = set()
+
+# Các tin nhắn hỏi giá chính xác
+GIA_EXACT = ["giá", "gia", "giá?", "gia?", "giá ạ", "giá a", "xin giá", "hỏi giá", "cho hỏi giá"]
+
+# Các cụm từ hỏi giá
+GIA_PHRASES = [
+    "giá bao nhiêu", "bao nhiêu tiền", "giá thuốc", "giá sản phẩm",
+    "giá nhỏ mắt", "giá 1 lọ", "giá 1 hộp", "thuốc bao nhiêu",
+    "giá tiền", "giá là bao nhiêu", "giá mua", "mua giá bao nhiêu"
 ]
 
 
@@ -45,8 +51,18 @@ async def receive_message(request: Request):
 
             user_text = message["text"].lower().strip()
 
-            # Chỉ trả lời khi khách hỏi giá
-            if any(keyword in user_text for keyword in GIA_KEYWORDS):
+            # Đã trả lời rồi thì bỏ qua
+            if sender_id in da_tra_loi:
+                continue
+
+            # Kiểm tra có hỏi giá không
+            is_ask_price = (
+                user_text in GIA_EXACT or
+                any(phrase in user_text for phrase in GIA_PHRASES)
+            )
+
+            if is_ask_price:
+                da_tra_loi.add(sender_id)
                 await send_message(sender_id, "Sản phẩm thuốc nhỏ mắt thảo dược bên em có giá 150k/1 hộp ạ")
                 await asyncio.sleep(0.8)
                 await send_message(sender_id, "Bé nhà mình đang bị ghèn ở mắt, đau mắt đỏ hay mắt bị đục vậy ạ")
